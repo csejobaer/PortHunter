@@ -1,0 +1,17 @@
+{
+    "nmap_path": "nmap",
+    "nuclei_path": "nuclei",
+    "msfconsole_path": "msfconsole",
+    "threads": 100,
+    "timeout": 3,
+    "aggressive_mode": false,
+    "save_results": true,
+    "generate_pdf": false,
+    "ai_suggestions": true,
+    "max_ports": 65535,
+    "common_ports_only": false,
+    "user_agents": [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
+    ]
+}
