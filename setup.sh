@@ -3,14 +3,14 @@
 # PortHunter - Advanced Pentest Suite
 # Setup Script - Creates complete directory structure
 
-set -e  # Stop on error
+set -e
 
-# Colors for output
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 # Banner
 echo -e "${BLUE}"
@@ -28,25 +28,13 @@ echo "╚═══════════════════════�
 echo -e "${NC}"
 echo ""
 
-# Check if running as root
-if [[ $EUID -eq 0 ]]; then
-   echo -e "${YELLOW}[!] Running as root...${NC}"
-fi
-
-# Create main directory structure
 echo -e "${GREEN}[+] Creating PortHunter directory structure...${NC}"
 
-# Create main project directory if not exists
-PROJECT_DIR="PortHunter"
-mkdir -p "$PROJECT_DIR"
-cd "$PROJECT_DIR"
-
-# Create all directories
+# Create main directories
 directories=(
     "core"
     "modules"
     "utils"
-    "config"
     "config/wordlists"
     "reports"
     "templates"
@@ -62,32 +50,20 @@ for dir in "${directories[@]}"; do
     echo -e "${GREEN}  ✓ Created: $dir${NC}"
 done
 
-# Create __init__.py files for Python packages
+# Create __init__.py files
 echo -e "${GREEN}[+] Creating Python package files...${NC}"
 for dir in core modules utils ai; do
     touch "$dir/__init__.py"
     echo -e "${GREEN}  ✓ Created: $dir/__init__.py${NC}"
 done
 
-# Create main Python files
-echo -e "${GREEN}[+] Creating main Python files...${NC}"
-
-# main.py
-cat > main.py << 'EOF'
+# Create main.py
+echo -e "${GREEN}[+] Creating main.py...${NC}"
+cat > main.py << 'MAINEOF'
 #!/usr/bin/env python3
-"""
-PortHunter - Advanced Pentest Suite
-Main entry point
-"""
-
 import sys
-import os
 import argparse
 from colorama import Fore, Style, init
-from core.nmap_wrapper import NmapWrapper
-from core.nuclei_wrapper import NucleiWrapper
-from core.msf_suggestions import MetasploitSuggester
-from core.report_engine import ReportEngine
 
 init(autoreset=True)
 
@@ -96,22 +72,30 @@ def banner():
 ╔══════════════════════════════════════════════════════════════════╗
 ║     🚀 PortHunter - Advanced Pentest Suite v2.0                 ║
 ║          For Authorized Security Testing Only                   ║
-║        Integrated: Nmap | Nuclei | Metasploit                   ║
 ╚══════════════════════════════════════════════════════════════════╝
 {Style.RESET_ALL}
     """)
 
 def main():
     banner()
-    print(f"{Fore.YELLOW}[!] Use -h for help{Style.RESET_ALL}\n")
+    parser = argparse.ArgumentParser(description='PortHunter - Advanced Security Scanner')
+    parser.add_argument('target', help='Target IP or domain')
+    parser.add_argument('-p', '--ports', default='1-1000', help='Port range')
+    parser.add_argument('-s', '--scan-type', choices=['quick', 'full', 'vuln'], default='quick')
+    args = parser.parse_args()
     
+    print(f"{Fore.GREEN}[+] Target: {args.target}{Style.RESET_ALL}")
+    print(f"{Fore.GREEN}[+] Ports: {args.ports}{Style.RESET_ALL}")
+    print(f"{Fore.GREEN}[+] Scan Type: {args.scan_type}{Style.RESET_ALL}")
+
 if __name__ == "__main__":
     main()
-EOF
+MAINEOF
 chmod +x main.py
 
-# core/nmap_wrapper.py
-cat > core/nmap_wrapper.py << 'EOF'
+# Create core/nmap_wrapper.py
+echo -e "${GREEN}[+] Creating core/nmap_wrapper.py...${NC}"
+cat > core/nmap_wrapper.py << 'NMAPEOF'
 #!/usr/bin/env python3
 import subprocess
 import re
@@ -123,10 +107,10 @@ class NmapWrapper:
         self.results = {}
     
     def run_port_scan(self, ports="1-1000"):
-        print(f"{Fore.CYAN}[*] Running Nmap port scan on {self.target}...{Fore.RESET}")
+        print(f"{Fore.CYAN}[*] Running Nmap scan on {self.target}...{Fore.RESET}")
         open_ports = []
         try:
-            cmd = f"nmap -p {ports} -sV -sC -O {self.target} -oN reports/nmap_scan.txt"
+            cmd = f"nmap -p {ports} -sV --open {self.target} -oN reports/nmap_scan.txt"
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=300)
             pattern = r"(\d+)/tcp\s+open\s+(\w+)\s+(.*)"
             for line in result.stdout.split('\n'):
@@ -142,13 +126,13 @@ class NmapWrapper:
         except Exception as e:
             print(f"{Fore.RED}[-] Nmap error: {e}{Fore.RESET}")
             return []
-EOF
+NMAPEOF
 
-# core/nuclei_wrapper.py
-cat > core/nuclei_wrapper.py << 'EOF'
+# Create core/nuclei_wrapper.py
+echo -e "${GREEN}[+] Creating core/nuclei_wrapper.py...${NC}"
+cat > core/nuclei_wrapper.py << 'NUCLEIEOF'
 #!/usr/bin/env python3
 import subprocess
-import json
 from colorama import Fore
 
 class NucleiWrapper:
@@ -156,20 +140,21 @@ class NucleiWrapper:
         self.target = target
         self.vulnerabilities = []
     
-    def run_scan(self, template_type="all"):
-        print(f"{Fore.CYAN}[*] Running Nuclei scan on {self.target}...{Fore.RESET}")
+    def run_scan(self):
+        print(f"{Fore.CYAN}[*] Running Nuclei scan...{Fore.RESET}")
         try:
-            cmd = f"nuclei -u {self.target} -severity critical,high,medium -json -o reports/nuclei_results.json"
+            cmd = f"nuclei -u {self.target} -severity critical,high -o reports/nuclei_results.txt"
             subprocess.run(cmd, shell=True, timeout=600)
             print(f"{Fore.GREEN}[+] Nuclei scan completed{Fore.RESET}")
             return self.vulnerabilities
         except Exception as e:
             print(f"{Fore.RED}[-] Nuclei error: {e}{Fore.RESET}")
             return []
-EOF
+NUCLEIEOF
 
-# core/msf_suggestions.py
-cat > core/msf_suggestions.py << 'EOF'
+# Create core/msf_suggestions.py
+echo -e "${GREEN}[+] Creating core/msf_suggestions.py...${NC}"
+cat > core/msf_suggestions.py << 'MSFEOF'
 #!/usr/bin/env python3
 from colorama import Fore
 
@@ -191,20 +176,11 @@ class MetasploitSuggester:
                 self.suggestions.append({'port': port, 'service': service, **exploit_db[port]})
         print(f"{Fore.GREEN}[+] Found {len(self.suggestions)} exploit suggestions{Fore.RESET}")
         return self.suggestions
-    
-    def generate_msf_script(self):
-        script = "# Metasploit Resource Script\n"
-        for s in self.suggestions:
-            script += f"\n# Exploit for port {s['port']}\n"
-            for cmd in s['commands']:
-                script += f"{cmd}\n"
-        with open('reports/msf_commands.rc', 'w') as f:
-            f.write(script)
-        return "reports/msf_commands.rc"
-EOF
+MSFEOF
 
-# core/report_engine.py
-cat > core/report_engine.py << 'EOF'
+# Create core/report_engine.py
+echo -e "${GREEN}[+] Creating core/report_engine.py...${NC}"
+cat > core/report_engine.py << 'REPORTEOF'
 #!/usr/bin/env python3
 from datetime import datetime
 from colorama import Fore
@@ -218,20 +194,16 @@ class ReportEngine:
         filename = f"reports/report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
         html = f"""<!DOCTYPE html>
 <html>
-<head><title>PortHunter Report - {self.target}</title>
+<head><title>PortHunter Report</title>
 <style>
-body {{font-family: Arial; background:#f0f2f5; margin:20px;}}
-.container {{max-width:1200px; margin:auto; background:white; border-radius:10px;}}
-.header {{background:linear-gradient(135deg,#667eea,#764ba2); color:white; padding:30px; text-align:center;}}
-table {{width:100%; border-collapse:collapse;}}
-th,td {{padding:12px; text-align:left; border-bottom:1px solid #ddd;}}
-th {{background:#667eea; color:white;}}
+body {{font-family: Arial; background:#f0f2f5;}}
+.container {{max-width:1200px; margin:auto; background:white;}}
+.header {{background:#667eea; color:white; padding:20px;}}
 </style>
 </head>
 <body>
 <div class="container">
-<div class="header"><h1>🔍 PortHunter Report</h1><p>{self.target} | {datetime.now()}</p></div>
-<div style="padding:20px;"><h2>Scan Results</h2><p>Report generated successfully.</p></div>
+<div class="header"><h1>🔍 PortHunter Report</h1><p>{self.target}</p></div>
 </div>
 </body>
 </html>"""
@@ -239,23 +211,23 @@ th {{background:#667eea; color:white;}}
             f.write(html)
         print(f"{Fore.GREEN}[+] Report saved: {filename}{Fore.RESET}")
         return filename
-EOF
+REPORTEOF
 
 # Create config/settings.json
-cat > config/settings.json << 'EOF'
+echo -e "${GREEN}[+] Creating config/settings.json...${NC}"
+cat > config/settings.json << 'CONFIGEOF'
 {
     "threads": 100,
     "timeout": 3,
     "aggressive_mode": false,
-    "generate_pdf": false,
     "ai_suggestions": true,
-    "max_ports": 65535,
-    "common_ports_only": false
+    "max_ports": 65535
 }
-EOF
+CONFIGEOF
 
 # Create requirements.txt
-cat > requirements.txt << 'EOF'
+echo -e "${GREEN}[+] Creating requirements.txt...${NC}"
+cat > requirements.txt << 'REQEOF'
 colorama==0.4.6
 python-nmap==0.7.1
 requests==2.31.0
@@ -263,21 +235,30 @@ beautifulsoup4==4.12.2
 tabulate==0.9.0
 jinja2==3.1.2
 tqdm==4.66.1
-EOF
+REQEOF
+
+# Create .gitignore
+echo -e "${GREEN}[+] Creating .gitignore...${NC}"
+cat > .gitignore << 'GITEOF'
+__pycache__/
+*.pyc
+reports/*.html
+reports/*.txt
+reports/*.json
+logs/*.log
+*.pyc
+.DS_Store
+venv/
+env/
+GITEOF
 
 # Create README.md
-cat > README.md << 'EOF'
+echo -e "${GREEN}[+] Creating README.md...${NC}"
+cat > README.md << 'READMEEOF'
 # 🔍 PortHunter - Advanced Pentest Suite
 
-[![Version](https://img.shields.io/badge/version-2.0-blue.svg)](https://github.com/yourusername/porthunter)
-[![Python](https://img.shields.io/badge/python-3.8+-green.svg)](https://python.org)
-
 ## Quick Start
-
 ```bash
-# Install
 chmod +x setup.sh
 ./setup.sh
-
-# Run
-python3 main.py <target> -p 1-1000
+python3 main.py scanme.nmap.org -p 1-1000
